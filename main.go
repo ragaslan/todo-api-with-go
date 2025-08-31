@@ -20,6 +20,7 @@ func main() {
 	app := fiber.New()
 
 	app.Get("/", getAllTodos)
+	app.Get("/:id", getTodoById)
 	app.Post("/", createTodo)
 	app.Delete("/:id", deleteTodo)
 	app.Put("/:id", updateTodoStatus)
@@ -39,6 +40,22 @@ func getAllTodos(ctx *fiber.Ctx) error {
 		return fiber.NewError(500, err.Error())
 	}
 	return ctx.JSON(todos)
+}
+
+func getTodoById(ctx *fiber.Ctx) error {
+	// catch tood id from path
+	todoId, err := ctx.ParamsInt("id")
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid Id Parameter "+err.Error())
+	}
+
+	var todo model.Todo
+	if err := database.DB.First(&todo, todoId).Error; err != nil {
+		return fiber.NewError(fiber.StatusNotFound, " There is no Todo with this id ! ", err.Error())
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(todo)
+
 }
 
 func createTodo(ctx *fiber.Ctx) error {
