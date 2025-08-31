@@ -22,6 +22,7 @@ func main() {
 	app.Get("/", getAllTodos)
 	app.Post("/", createTodo)
 	app.Delete("/:id", deleteTodo)
+	app.Put("/:id", updateTodoStatus)
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.SendStatus(404)
@@ -81,4 +82,39 @@ func deleteTodo(ctx *fiber.Ctx) error {
 		"message": "Todo is deleted successfully",
 	})
 
+}
+
+func updateTodoStatus(ctx *fiber.Ctx) error {
+	todoId, err := ctx.ParamsInt("id")
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, " Invalid todo id "+err.Error())
+	}
+
+	type StatusUpdate struct {
+		Status bool
+	}
+	var req StatusUpdate
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid payload !",
+		})
+	}
+
+	result := database.DB.Model(&model.Todo{}).Where("id = ?", todoId).Update("Status", req.Status)
+
+	if result.Error != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": result.Error.Error(),
+		})
+	}
+
+	if result.RowsAffected == 0 {
+		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "Todo Record is not found !",
+		})
+	}
+
+	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "Todo status is updated successfully",
+	})
 }
